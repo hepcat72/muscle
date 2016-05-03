@@ -1,0 +1,6 @@
+import(Biostrings)
+
+exportPattern(muscle)
+
+useDynLib(muscle, .registration = TRUE, .fixes = ".")
+

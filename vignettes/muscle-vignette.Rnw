@@ -1,0 +1,165 @@
+%\VignetteIndexEntry{A guide to using muscle}
+%\VignetteDepends{Biostrings}
+%\VignetteKeyword{muscle}
+%\VignettePackage{muscle}
+
+\documentclass[a4paper, oneside, 10pt]{article}
+
+\usepackage[pdftex]{graphicx}
+\usepackage{calc}
+\usepackage{sectsty}
+\usepackage{caption}
+\usepackage{natbib}
+\renewcommand{\captionfont}{\it\sffamily}
+\renewcommand{\captionlabelfont}{\bf\sffamily}
+\allsectionsfont{\sffamily}
+
+\usepackage[a4paper, left=25mm, right=20mm, top=20mm, bottom=25mm, nohead]{geometry}
+\setlength{\parskip}{1.5ex}
+\setlength{\parindent}{0cm}
+\pagestyle{plain}
+
+\usepackage{Sweave}
+\usepackage[colorlinks=true, a4paper=true, pdfstartview=FitV,
+linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+
+
+
+\title{Using \textbf{{\tt muscle}} to produce multiple sequence alignments in {\tt Bioconductor}}
+\author{Alex T. Kalinka}
+\date{\today \\
+	alex.t.kalinka@gmail.com \\
+	\small{Institute for Population Genetics, Vetmeduni Vienna, Veterin{\"a}rplatz 1, 1210 Vienna, Austria.}}
+
+
+	
+\begin{document}
+\maketitle
+
+
+\begin{abstract}
+ \noindent Producing high-quality multiple sequence alignments of DNA, RNA, or amino acid sequences is often an essential component of any comparative sequence-based study. The MUSCLE algorithm employs a progressive alignment approach to optimise pairwise alignment scores, and achieves both high accuracy and reduced computational time even when handling thousands of sequences \citep{edgar2004, edgar2004a}. The {\tt R} package {\tt muscle} integrates the MUSCLE algorithm into the {\tt Bioconductor} project by utilizing existing \href{http://www.bioconductor.org/packages/release/bioc/html/Biostrings.html}{{\tt Biostrings}} classes for representing sequence objects and multiple alignments.
+ 
+\end{abstract}
+
+
+\tableofcontents
+
+
+\section{Introduction}
+
+\noindent Performing multiple sequence alignments of biological sequences is often an essential aspect of studies that utilize sequence data. For example, multiple sequence alignments are at the core of several studies, such as phylogenetic tree estimation based on sequence data, testing for signatures of selection in coding or non-coding sequences, comparative genomics, secondary structure prediction, or critical residue identification. Hence, the multiple sequences may be homologous sequences belonging to several different species, paralogous sequences belonging to a single species, orthologous sequences belonging to multiple individuals of a single species, or any other variant thereof.
+
+The MUSCLE algorithm is a progressive alignment method that works with DNA, RNA, and amino acid sequences producing high-accuracy alignments with very fast computational times \citep{edgar2004, edgar2004a}. The algorithm is iterative, with later iterations refining the earlier alignments. In each iteration, pairwise alignment scores are computed for all sequence pairs (based on \emph{k}-mer counting or global pairwise alignments) and the values are entered into a triangular distance matrix. This matrix is then used to build a binary tree of all the sequences (using one of various different hierarchical clustering algorithms, such as UPGMA or neighbour-joining). A progressive alignment is then built from this matrix by following the tree from the tips (individual sequences) to the root (all sequences aligned) adding in gaps as appropriate. 
+
+
+\clearpage
+
+
+
+\section{Example session}
+
+\noindent First, we must load the {\tt muscle} package into our current {\tt R} session:
+
+<<results = hide>>=
+library(muscle)
+@
+
+To illustrate the package, we will perform a multiple sequence alignment of the MAX gene \citep{wagneretal1992} across 31 mammalian species. These sequences are available in the {\tt umax} object that is part of the {\tt muscle} package, and is an object of class {\tt DNAStringSet}:
+
+<<>>=
+umax
+@
+
+All input to the {\tt muscle} function should be objects of class {\tt XStringSet}, which can be one of {\tt DNAStringSet}, {\tt RNAStringSet}, or {\tt AAStringSet} (see package \href{http://www.bioconductor.org/packages/release/bioc/html/Biostrings.html}{{\tt Biostrings}} \citep{pagesetal2015}). An alignment is generated as follows ({\tt muscle} automatically detects whether the input is DNA, RNA, or amino acid):
+
+<<results = hide>>=
+aln <- muscle(umax)
+@ 
+
+The output is an object of class {\tt MultipleAlignment} (see package \href{http://www.bioconductor.org/packages/release/bioc/html/Biostrings.html}{{\tt Biostrings}}):
+
+<<>>=
+aln
+@
+
+If the desired input is initially present in an external file, such as a {\tt fasta} file, then these sequences can be read into an {\tt XStringSet} object using one of the {\tt XstringSet} input-output functions ({\tt readDNAStringSet}, {\tt readRNAStringSet}, or {\tt readAAStringSet}). For example, to read in one of the example {\tt fasta} files in the external data contained in the {\tt Biostrings} package:
+
+<<>>=
+file.path <- system.file("extdata", "someORF.fa", package = "Biostrings")
+orf <- readDNAStringSet(file.path, format = "fasta")
+@
+
+This will read in a {\tt DNAStringSet} object containing 7 unaligned sequences:
+
+<<>>=
+orf
+@
+
+
+
+
+
+\section{Arguments for the {\tt muscle} function}
+
+\noindent Many different arguments can be passed to the {\tt muscle} function, and these are described in detail in the online \href{http://www.drive5.com/muscle/muscle_userguide3.8.html}{documentation}. These arguments are either options (taking various values) or flags (either {\tt TRUE} or {\tt FALSE}). Here, I describe some of the more commonly-used arguments.
+
+\textbf{Enhanced speed}. To enhance the speed of the algorithm, the {\tt diags = TRUE} flag will optimize the speed with a potential loss of accuracy:
+
+<<results = hide>>=
+aln <- muscle(umax, diags = TRUE)
+@ 
+
+\textbf{Gap penalties}. Default gap penalties can be modified to produce altered alignments. The gap penalty must be negative, with larger negative values indicating more stringent penalties:
+
+<<results = hide>>=
+aln <- muscle(umax, gapopen = -30)
+@ 
+
+\textbf{Remove progress indicators}. When running the algorithm repeatedly (for a batch of sequences, for example), it may be preferred to stop output of the algorithm's progress to the screen (e.g. if there is a global progress indicator running):
+
+<<results = hide>>=
+aln <- muscle(umax, quiet = TRUE)
+@ 
+
+\textbf{Maximum number of hours}. If an alignment is expected to take a long time, a maximum total number of hours can be specified, which, if reached, will lead to the algorithm stopping at this point and returning the current alignment:
+
+<<results = hide>>=
+aln <- muscle(umax, maxhours = 24.0)
+@ 
+
+\textbf{Log file}. To find out what default settings are being used for all the arguments, a log file can be written to disk using the {\tt log} argument in conjunction with the verbose argument, e.g. {\tt log = "log.txt", verbose = TRUE}. This will write out the default values to the file {\tt log.txt} in the current working directory of {\tt R}.
+
+
+
+\section{{\tt R} Session Information}
+
+\noindent The examples in this vignette were run under the following conditions:
+
+<<>>=
+sessionInfo()
+@
+
+
+
+
+\begin{thebibliography}{}
+
+\bibitem[Edgar, 2004]{edgar2004} Edgar, R. C. (2004) MUSCLE: multiple sequence alignment with high accuracy and high throughput. {\it Nucleic Acids Research}, {\bf 32}, 1792-1797.
+
+\bibitem[Edgar, 2004a]{edgar2004a} Edgar, R. C. (2004) MUSCLE: a multiple sequence alignment method with reduced time and space complexity. {\it BMC Bioinformatics}, {\bf 5}, 113.
+
+\bibitem[Pages et al., 2015]{pagesetal2015} Pages, H., Aboyoun, P., Gentleman, R. and DebRoy, S. (2015) Biostrings: String objects representing biological sequences, and matching algorithms. R package version 2.34.1
+
+\bibitem[Wagner et al., 1992]{wagneretal1992} Wagner, A. J., et al. (1992) Expression, regulation, and chromosomal localization of the Max gene. {\it Proc Natl Acad Sci USA}, {\bf 89}, 3111-3115.
+
+
+\end{thebibliography}
+
+
+
+
+\end{document}
+
+
+
