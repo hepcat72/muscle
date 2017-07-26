@@ -111,7 +111,7 @@ PTR_SCOREMATRIX ReadMx(TextFile &File)
 
 		char *p = Line + 1;
 		char *maxp = p + strlen(Line);
-		for (unsigned Col = 0; Col < HeadingCount - 1; ++Col)
+		for (unsigned Col = 0; Col < HeadingCount; ++Col)
 			{
 			if (p >= maxp)
 				Quit("Too few fields in line of matrix file: '%s'", Line);
@@ -140,16 +140,14 @@ PTR_SCOREMATRIX ReadMx(TextFile &File)
 			if (Mx[i][j] != Mx[j][i])
 				{
 				Warning("Matrix is not symmetrical, %c->%c=%g, %c->%c=%g",
-				  CharToLetter(i),
-				  CharToLetter(j),
+				  LetterToChar(i),
+				  LetterToChar(j),
 				  Mx[i][j],
-				  CharToLetter(j),
-				  CharToLetter(i),
+				  LetterToChar(j),
+				  LetterToChar(i),
 				  Mx[j][i]);
-				goto ExitLoop;
 				}
 			}
-ExitLoop:;
 
 	if (g_bVerbose)
 		LogMx();
