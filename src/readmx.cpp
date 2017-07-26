@@ -140,11 +140,11 @@ PTR_SCOREMATRIX ReadMx(TextFile &File)
 			if (Mx[i][j] != Mx[j][i])
 				{
 				Warning("Matrix is not symmetrical, %c->%c=%g, %c->%c=%g",
-				  CharToLetter(i),
-				  CharToLetter(j),
+				  i,
+				  j,
 				  Mx[i][j],
-				  CharToLetter(j),
-				  CharToLetter(i),
+				  j,
+				  i,
 				  Mx[j][i]);
 				goto ExitLoop;
 				}
